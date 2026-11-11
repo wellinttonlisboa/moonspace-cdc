@@ -1,0 +1,51 @@
+{
+  "type": "record",
+  "name": "ConnectorRecord",
+  "namespace": "br.com.moonspace.schema.registry.v1.connector",
+  "version":"1.0.0",
+  "fields": [
+    {
+      "name": "id",
+      "type": "string"
+    },
+    {
+      "name": "name",
+      "type": "string"
+    },
+    {
+      "name": "driverId",
+      "type": "string"
+    },
+    {
+      "name": "driverName",
+      "type": "string"
+    },
+    {
+      "name": "properties",
+      "type": {
+        "type": "array",
+        "items" : "string",
+        "default": []
+      }
+    },
+    {
+      "name": "operation",
+      "type": {
+        "type": "enum",
+        "name": "Operation",
+        "symbols": [
+          "CREATED",
+          "UPDATED",
+          "DELETED"
+        ]
+      }
+    },
+    {
+      "name": "occurredOn",
+      "type": {
+        "type": "long",
+        "logicalType": "timestamp-millis"
+      }
+    }
+  ]
+}

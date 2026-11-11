@@ -1,0 +1,7 @@
+### Send POST request
+GET http://localhost:18701/api/v1/drivers
+Content-Type: application/json
+
+{
+
+}

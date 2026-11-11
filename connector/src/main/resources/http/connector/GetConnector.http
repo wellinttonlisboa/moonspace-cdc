@@ -1,0 +1,7 @@
+### Send POST request
+GET http://localhost:18701/api/v1/connectors/0AD5862AA6574F008A243C56B296698F
+Content-Type: application/json
+
+{
+
+}

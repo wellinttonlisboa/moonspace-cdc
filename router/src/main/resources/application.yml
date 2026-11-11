@@ -1,0 +1,105 @@
+application:
+  environment: Router [DEVELOPMENT]
+
+spring:
+  application:
+    name: cdc-router
+  profiles:
+    active: ${PROFILE:dev}
+  cache:
+    redis:
+      time-to-live: 86400 #TTL 24 hours
+  data:
+    mongodb:
+      database: router
+      host: ${MONGODB_HOST:localhost}
+      port: ${MONGODB_PORT:27017}
+#      username: ${MONGODB_USERNAME:root}
+#      password: ${MONGODB_PASSWORD:root}
+    redis:
+      port: ${REDIS_PORT:6379}
+      host: ${REDIS_HOST:localhost}
+      password: ${REDIS_PASS:root}
+      database: ${REDIS_DB:0}
+  kafka:
+    bootstrap-servers: ${KAFKA_SERVER:localhost:9092}
+    listener:
+      ack-mode: MANUAL_IMMEDIATE
+    producer:
+      bootstrap-servers: ${KAFKA_SERVER:localhost:9092}
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: io.confluent.kafka.serializers.KafkaAvroSerializer
+      properties:
+        schema:
+          registry:
+            url: ${SCHEMA_REGISTRY:http://localhost:8081}
+        acks: all
+        retries: 10
+    consumer:
+      bootstrap-servers: ${KAFKA_SERVER:localhost:9092}
+      group-id: audit-connector-group
+      autoOffsetReset: earliest
+      keyDeserializer: org.apache.kafka.common.serialization.StringDeserializer
+      valueDeserializer: io.confluent.kafka.serializers.KafkaAvroDeserializer
+      properties:
+        schema:
+          registry:
+            url: ${SCHEMA_REGISTRY:http://localhost:8081}
+        specific:
+          avro:
+            reader: true
+  web:
+    resources:
+      add-mappings: false
+  servlet:
+    multipart:
+      max-file-size: 10GB
+      max-request-size: 100GB
+
+kafka:
+  consumer:
+    connector:
+      topic: MOONSPACE-CDC-Connector
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: '*'
+        
+logging:
+  level:
+    root: info
+    org.springframework.web: info
+    br.com.moonspace.cdc: debug
+  file:
+    name: ./logs/${spring.application.name}.log        
+
+server:
+  port: ${PORT:18702}
+  forward-headers-strategy: framework
+  servlet:
+    context-path: /api
+  compression:
+    enabled: true # Whether response compression is enabled.
+    mime-types: text/html,text/xml,text/plain,text/css,text/javascript,application/javascript,application/json # Comma-separated list of MIME types that should be compressed.
+    min-response-size: 1024 # Minimum "Content-Length" value that is required for compression to be performed.
+
+#keycloak:
+#  url: http://${KEYCLOAK_SERVER:localhost}:${KEYCLOAK_PORT:18080}/realms/${KEYCLOAK_CLIENT_ID:telemetry}/protocol/openid-connect/token
+
+api:
+  version: v1
+  description: Change Data Capture - Router.
+  url:
+    homologation: http://${HOMOLOGATION_SERVER:https://api-hml.moonspace.com.br/${spring.application.name}}
+    production: ${PRODUCTION_URI:https://api.moonspace.com.br/${spring.application.name}}
+
+springdoc:
+  api-docs:
+    groups:
+      enabled: true
+    path: /doc/router/v3/api-documents
+  swagger-ui:
+    enabled: true
+    path: /doc/router/v1/api.html

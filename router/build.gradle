@@ -1,0 +1,172 @@
+import org.apache.avro.tool.SpecificCompilerTool
+
+buildscript {
+	dependencies {
+		classpath group: 'org.apache.avro', name: 'avro-tools', version: '1.11.3'
+	}
+}
+
+plugins {
+	id 'java'
+	id 'jacoco'
+	id 'org.springframework.boot' version '3.2.5'
+	id 'io.spring.dependency-management' version '1.1.4'
+}
+
+jacoco {
+	toolVersion = '0.8.12'
+}
+
+def avroSchemasDir = "src/main/resources/schema/registry/v1/connector"
+def avroCodeGenerationDir = "src/main/java"
+
+sourceSets.main.java.srcDirs += [avroCodeGenerationDir]
+
+apply from: './gradle/projects.gradle'
+
+group = 'br.com.moonspace.cdc'
+version = APP_VERSION
+
+java {
+	sourceCompatibility = '21'
+}
+
+bootJar {
+	dependsOn('copyAgent')
+	archiveFileName = 'app.jar'
+}
+
+configurations {
+	compileOnly {
+		extendsFrom annotationProcessor
+	}
+	agent
+}
+
+repositories {
+	mavenCentral()
+	maven { url 'https://packages.confluent.io/maven' }
+}
+
+dependencies {
+	agent 'io.opentelemetry.javaagent:opentelemetry-javaagent:2.2.0'
+
+	//Spring
+	implementation 'org.springframework.boot:spring-boot-starter-web'
+	implementation 'org.springframework.boot:spring-boot-starter-data-mongodb'
+	implementation 'org.springframework.boot:spring-boot-starter-validation'
+	implementation 'org.springframework.kafka:spring-kafka'
+	//Apache Camel
+	implementation 'org.apache.camel.springboot:camel-spring-boot-starter:4.4.1'
+	implementation 'org.apache.camel.springboot:camel-debezium-mongodb-starter:4.4.1'
+	implementation 'org.apache.camel.springboot:camel-debezium-postgres-starter:4.4.1'
+	implementation 'org.apache.camel.springboot:camel-debezium-db2-starter:4.4.1'
+	implementation 'org.apache.camel.springboot:camel-debezium-mysql-starter:4.4.1'
+	implementation 'org.apache.camel.springboot:camel-debezium-oracle-starter:4.4.1'
+	implementation 'org.apache.camel.springboot:camel-debezium-sqlserver-starter:4.4.1'
+	//Google
+	implementation 'com.google.guava:guava:33.1.0-jre'
+	//Docs
+	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.4.0'
+	//Lombok
+	compileOnly 'org.projectlombok:lombok'
+	annotationProcessor 'org.projectlombok:lombok'
+	//Apache Avro
+	implementation 'io.confluent:kafka-avro-serializer:7.6.0'
+	implementation 'org.apache.avro:avro:1.11.3'
+	//Test
+	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	testImplementation 'org.springframework.kafka:spring-kafka-test'
+	//External Libs
+	implementation(project(":core"))
+	implementation(project(":commons"))
+}
+
+ext {
+	set('springCloudVersion', "2023.0.1")
+}
+
+dependencyManagement {
+	imports {
+		mavenBom("org.springframework.cloud:spring-cloud-dependencies:${springCloudVersion}")
+	}
+}
+
+tasks.register('copyAgent', Copy) {
+	from configurations.agent {
+		rename "opentelemetry-javaagent-.*\\.jar", "opentelemetry-javaagent.jar"
+	}
+	into layout.buildDirectory.dir("agent")
+}
+
+tasks.register('avroCodeGeneration') {
+	// Define the task inputs and outputs for the Gradle up-to-date checks.
+	inputs.dir(avroSchemasDir)
+	outputs.dir(avroCodeGenerationDir)
+	// The Avro code generation logs to the standard streams. Redirect the standard streams to the Gradle log.
+	logging.captureStandardOutput(LogLevel.INFO);
+	logging.captureStandardError(LogLevel.ERROR)
+	doLast {
+		new SpecificCompilerTool().run(System.in, System.out, System.err, List.of(
+				"-encoding", "UTF-8",
+				"-string",
+				"-fieldVisibility", "private",
+				"-noSetters",
+				"schema", "$projectDir/$avroSchemasDir".toString(), "$projectDir/$avroCodeGenerationDir".toString()
+		))
+	}
+}
+
+tasks.withType(JavaCompile).configureEach {
+	dependsOn('avroCodeGeneration')
+}
+
+def coverageExcludes = [
+		'br/com/moonspace/cdc/router/StartRouterApplication*',
+		'br/com/moonspace/schema/registry/**'
+]
+
+tasks.named('test') {
+	useJUnitPlatform()
+	finalizedBy tasks.named('jacocoTestReport'), tasks.named('jacocoTestCoverageVerification')
+}
+
+jacocoTestReport {
+	dependsOn tasks.named('test')
+	reports {
+		xml.required = true
+		html.required = true
+	}
+	afterEvaluate {
+		classDirectories.setFrom(files(classDirectories.files.collect {
+			fileTree(dir: it, exclude: coverageExcludes)
+		}))
+	}
+}
+
+jacocoTestCoverageVerification {
+	dependsOn tasks.named('jacocoTestReport')
+	afterEvaluate {
+		classDirectories.setFrom(files(classDirectories.files.collect {
+			fileTree(dir: it, exclude: coverageExcludes)
+		}))
+	}
+	violationRules {
+		rule {
+			limit {
+				counter = 'LINE'
+				value = 'COVEREDRATIO'
+				minimum = 1.0
+			}
+			limit {
+				counter = 'BRANCH'
+				value = 'COVEREDRATIO'
+				minimum = 1.0
+			}
+		}
+	}
+}
+
+tasks.named('check') {
+	dependsOn tasks.named('jacocoTestCoverageVerification')
+}

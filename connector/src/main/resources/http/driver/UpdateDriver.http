@@ -1,0 +1,8 @@
+### Send PUT request
+PUT http://localhost:18701/api/v1/drivers
+Content-Type: application/json
+
+{
+  "id": "787D8105539B49709664239E98825CA6",
+  "name": "debezium-mongodb"
+}

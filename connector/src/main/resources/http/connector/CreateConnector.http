@@ -1,0 +1,11 @@
+### Send POST request
+POST http://localhost:18701/api/v1/connectors
+Content-Type: application/json
+
+{
+  "driverId": "4BF6F383644047F0B40D02C46345313A",
+  "name": "mongodb",
+  "properties": [
+    "additionalProperties"
+  ]
+}

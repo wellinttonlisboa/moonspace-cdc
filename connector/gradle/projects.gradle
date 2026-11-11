@@ -1,0 +1,6 @@
+def core= project(":$core_name")
+def commons= project(":$common_name")
+ext.projects = [
+        "core": core,
+        "commons": commons,
+]

@@ -1,0 +1,84 @@
+plugins {
+	id 'java'
+	id 'jacoco'
+	id 'org.springframework.boot' version '3.2.5'
+	id 'io.spring.dependency-management' version '1.1.4'
+}
+
+jacoco {
+	toolVersion = '0.8.12'
+}
+
+apply from: './gradle/projects.gradle'
+
+group = 'br.com.moonspace'
+version = APP_VERSION
+
+java {
+	sourceCompatibility = '21'
+}
+
+bootJar {
+	enabled = false
+}
+
+repositories {
+	mavenCentral()
+}
+
+dependencies {
+	//Spring
+	implementation 'org.springframework.boot:spring-boot-starter-web'
+	implementation 'org.springframework.boot:spring-boot-starter-data-mongodb'
+	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+	implementation 'org.springframework.kafka:spring-kafka'
+	implementation 'org.springframework.boot:spring-boot-starter-validation'
+	implementation 'org.springframework.security:spring-security-crypto'
+	//Miscellaneous
+	implementation 'com.google.guava:guava:33.1.0-jre'
+	//Docs
+	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.4.0'
+	//Test
+	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	testImplementation 'org.springframework.kafka:spring-kafka-test'
+	//Lombok
+	compileOnly 'org.projectlombok:lombok:1.18.30'
+	annotationProcessor 'org.projectlombok:lombok:1.18.30'
+	//External Libs
+	implementation(project(":core"))
+}
+
+tasks.named('test') {
+	useJUnitPlatform()
+	finalizedBy tasks.named('jacocoTestReport'), tasks.named('jacocoTestCoverageVerification')
+}
+
+jacocoTestReport {
+	dependsOn tasks.named('test')
+	reports {
+		xml.required = true
+		html.required = true
+	}
+}
+
+jacocoTestCoverageVerification {
+	dependsOn tasks.named('jacocoTestReport')
+	violationRules {
+		rule {
+			limit {
+				counter = 'LINE'
+				value = 'COVEREDRATIO'
+				minimum = 1.0
+			}
+			limit {
+				counter = 'BRANCH'
+				value = 'COVEREDRATIO'
+				minimum = 1.0
+			}
+		}
+	}
+}
+
+tasks.named('check') {
+	dependsOn tasks.named('jacocoTestCoverageVerification')
+}

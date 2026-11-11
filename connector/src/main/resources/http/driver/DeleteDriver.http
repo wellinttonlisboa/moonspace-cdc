@@ -1,0 +1,7 @@
+### Send POST request
+DELETE http://localhost:18701/api/v1/drivers/CAAE4200A8F14B8282332D814B3365DC
+Content-Type: application/json
+
+{
+
+}

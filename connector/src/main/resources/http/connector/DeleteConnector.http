@@ -1,0 +1,7 @@
+### Send POST request
+DELETE http://localhost:18701/api/v1/connectors/61FB15F04E404FB4ADE5325F0CEE593B
+Content-Type: application/json
+
+{
+
+}

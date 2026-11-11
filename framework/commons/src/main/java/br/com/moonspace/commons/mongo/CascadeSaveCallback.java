@@ -1,0 +1,49 @@
+package br.com.moonspace.commons.mongo;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.mongodb.core.MongoOperations;
+import org.springframework.data.mongodb.core.mapping.DBRef;
+import org.springframework.util.ReflectionUtils;
+
+import java.lang.reflect.Field;
+import java.util.Collection;
+
+import static java.util.Objects.nonNull;
+
+@Slf4j
+@RequiredArgsConstructor
+public class CascadeSaveCallback implements ReflectionUtils.FieldCallback {
+
+    private final Object source;
+    private final MongoOperations operations;
+
+    /**
+     * Method overloading for create cascade on save callback.
+     *
+     * @param field Field from entity annotated.
+     * @throws IllegalArgumentException Argument cannot be verified with cascade.
+     * @throws IllegalAccessException Argument cannot be accessed.
+     */
+    @Override
+    public void doWith(Field field) throws IllegalArgumentException, IllegalAccessException {
+        ReflectionUtils.makeAccessible(field);
+        if (field.isAnnotationPresent(DBRef.class) && field.isAnnotationPresent(Cascade.class)) {
+            final var fieldValue = field.get(source);
+            if (nonNull(fieldValue)) {
+                final var callback = new IdentifyCallback();
+                final CascadeType cascadeType = field.getAnnotation(Cascade.class).value();
+
+                if (cascadeType.equals(CascadeType.SAVE) || cascadeType.equals(CascadeType.ALL)) {
+                    if (fieldValue instanceof Collection<?>) {
+                        ((Collection<?>) fieldValue).forEach(operations::save);
+                    } else {
+                        ReflectionUtils.doWithFields(fieldValue.getClass(), callback);
+                        operations.save(fieldValue);
+                    }
+                }
+            }
+        }
+    }
+
+}

@@ -1,0 +1,5 @@
+rootProject.name = 'moonspace-commons'
+
+//Core
+include ":$core_name"
+project(":$core_name").projectDir = new File("$core_folder", "$core_name")

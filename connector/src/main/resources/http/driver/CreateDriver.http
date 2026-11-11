@@ -1,0 +1,7 @@
+### Send POST request
+POST http://localhost:18701/api/v1/drivers
+Content-Type: application/json
+
+{
+  "name": "debezium-mongodb"
+}
